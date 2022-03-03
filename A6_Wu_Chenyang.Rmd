@@ -2,7 +2,9 @@
 title: "DNA Alignments Assignment"
 author: "Chenyang Wu"
 date: "2022/3/2"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -15,7 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 #### **GitHub Link**: https://github.com/Wuris/Biol432_A6.git
 
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 # Load the packages we need
 library(dplyr)
 library(BiocManager)
@@ -119,7 +121,9 @@ Cov2Tree <- nj(CovDM)
 ggtree(Cov2Tree)
 ```
 #### **Fig.3** Phylogenetic tree of the 20 selected sequences.
+
 #### There is no branch in this phylogenetic tree, since the distances among sequences are similar and small (as shown in Fig.2). Thus, all the 20 sequences are close related to each other and probabily came from same species.
+
 #### The branch lengths in the above graph are based on the pairwise distance matrix, thus we could remove the branch length info to focus on the relationships among our 20 sequences.
 
 ```{r}
