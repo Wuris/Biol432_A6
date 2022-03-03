@@ -1,0 +1,125 @@
+---
+title: "DNA Alignments Assignment"
+author: "Chenyang Wu"
+date: "2022/3/1"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Project Info
+#### **GitHub user name**: Wuris
+#### **Date**: 2022/3/1
+#### **GitHub Link**: https://github.com/Wuris/Biol432_A6.git
+
+
+```{r}
+# Load the packages we need
+library(dplyr)
+library(BiocManager)
+library(genbankr)
+library(annotate)
+
+
+```
+
+### Input the unknown sequence
+```{r}
+# The Human isolate, unknown sequence
+UnSeq <- "ATGTCTGATAATGGACCCCAAAATCAGCGAAATGCACCCCGCATTACGTTTGGTGGACCCTCAGATTCAA
+CTGGCAGTAACCAGAATGGAGAACGCAGTGGGGCGCGATCAAAACAACGTCGGCCCCAAGGTTTACCCAA
+TAATACTGCGTCTTGGTTCACCGCTCTCACTCAACATGGCAAGGAAGACCTTAAATTCCCTCGAGGACAA
+GGCGTTCCAATTAACACCAATAGCAGTCCAGATGACCAAATTGGCTACTACCGAAGAGCTACCAGACGAA
+TTCGTGGTGGTGACGGTAAAATGAAAGATCTCAGTCCAAGATGGTATTTCTACTACCTAGGAACTGGGCC
+AGAAGCTGGACTTCCCTATGGTGCTAACAAAGACGGCATCATATGGGTTGCAACTGAGGGAGCCTTGAAT
+ACACCAAAAGATCACATTGGCACCCGCAATCCTGCTAACAATGCTGCAATCGTGCTACAACTTCCTCAAG
+GAACAACATTGCCAAAAGGCTTCTACGCAGAAGGGAGCAGAGGCGGCAGTCAAGCCTCTTCTCGTTCCTC
+ATCACGTAGTCGCAACAGTTCAAGAAATTCAACTCCAGGCAGCAGTAGGGGAACTTCTCCTGCTAGAATG
+GCTGGCAATGGCGGTGATGCTGCTCTTGCTTTGCTGCTGCTTGACAGATTGAACCAGCTTGAGAGCAAAA
+TGTCTGGTAAAGGCCAACAACAACAAGGCCAAACTGTCACTAAGAAATCTGCTGCTGAGGCTTCTAAGAA
+GCCTCGGCAAAAACGTACTGCCACTAAAGCATACAATGTAACACAAGCTTTCGGCAGACGTGGTCCAGAA
+CAAACCCAAGGAAATTTTGGGGACCAGGAACTAATCAGACAAGGAACTGATTACAAACATTGGCCGCAAA
+TTGCACAATTTGCCCCCAGCGCTTCAGCGTTCTTCGGAATGTCGCGCATTGGCATGGAAGTCACACCTTC
+GGGAACGTGGTTGACCTACACAGGTGCCATCAAATTGGATGACAAAGATCCAAATTTCAAAGATCAAGTC
+ATTTTGCTGAATAAGCATATTGACGCATACAAAACATTCCCACCAACAGAGCCTAAAAAGGACAAAAAGA
+AGAAGGCTGATGAAACTCAAGCCTTACCGCAGAGACAGAAGAAACAGCAAACTGTGACTCTTCTTCCTGC
+TGCAGATTTGGATGATTTCTCCAAACAATTGCAACAATCCATGAGCAGTGCTGACTCAACTCAGGCCTAA"
+# Adjust the unknown sequence by regular expression
+UnSeq <- gsub("[\r\n]", "", UnSeq)
+# Check the sequence
+UnSeq
+```
+
+### Generate the alignment
+```{r}
+# Pairwise Alignments
+# library(annotate)
+UnSeqBLAST <- blastSequences(paste(UnSeq), 
+                             as = 'data.frame', 
+                             hitListSize = 20, 
+                             timeout = 600)
+```
+
+```{r}
+# Multiple Alignments
+library(ape)
+USHitsDF <- data.frame(ID = UnSeqBLAST$Hit_accession, 
+                       Seq = UnSeqBLAST$Hsp_hseq,
+                       stringsAsFactors = FALSE)
+UnSeqBLAST$Hit_len
+```
+#### All these 20 base pairs have similar length. 
+
+```{r}
+USHitSeqs <- read.GenBank(UnSeqBLAST$Hit_accession)
+# Take a look at the species
+attr(USHitSeqs,"species")
+```
+#### From this output we could confirm that the separated unknown sequence are related to coronavirus 2, which could cause severe acute respiratory syndrome.
+
+
+```{r}
+# Convert DNASbin to DNAStringSet
+library(Biostrings)
+Cov2DNAstring <- USHitsDF$Seq %>%
+  as.character %>% # Convert to strings
+  lapply(., paste0, collapse = "") %>% # Collapse each sequence to a single string
+  unlist %>% # Flatten list to a vector
+  DNAStringSet # Convert vector to DNAStringSet object
+```
+
+
+```{r}
+# Give each sequence a unique names
+names(Cov2DNAstring) <- paste(1:nrow(USHitsDF), USHitsDF$ID, sep="_")
+
+# Use MUSCLE to align the sequences
+library(muscle)
+Cov2Align <- muscle::muscle(stringset = Cov2DNAstring, quiet = T)
+
+# Check the result
+Cov2Align
+```
+
+
+```{r}
+# Convert our DNAMultipleAlignment object to a DNABin object
+Cov2AlignBin <- as.DNAbin(Cov2Align)
+```
+
+
+```{r}
+SeqLen <- as.numeric(lapply(Cov2DNAstring, length))
+# Show the distribution of sequence length
+library(ggplot2)
+qplot(SeqLen) + theme_bw()
+```
+
+
+
+
+
+
+
