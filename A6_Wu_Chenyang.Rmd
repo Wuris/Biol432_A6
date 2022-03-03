@@ -1,7 +1,7 @@
 ---
 title: "DNA Alignments Assignment"
 author: "Chenyang Wu"
-date: "2022/3/1"
+date: "2022/3/2"
 output: pdf_document
 ---
 
@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Project Info
 #### **GitHub user name**: Wuris
-#### **Date**: 2022/3/1
+#### **Date**: 2022/3/2
 #### **GitHub Link**: https://github.com/Wuris/Biol432_A6.git
 
 
@@ -21,41 +21,23 @@ library(dplyr)
 library(BiocManager)
 library(genbankr)
 library(annotate)
-
-
+library(ape)
+library(Biostrings)
+library(muscle)
+library(ggplot2)
+library(reshape2)
+library(ggtree)
 ```
 
 ### Input the unknown sequence
 ```{r}
 # The Human isolate, unknown sequence
-UnSeq <- "ATGTCTGATAATGGACCCCAAAATCAGCGAAATGCACCCCGCATTACGTTTGGTGGACCCTCAGATTCAA
-CTGGCAGTAACCAGAATGGAGAACGCAGTGGGGCGCGATCAAAACAACGTCGGCCCCAAGGTTTACCCAA
-TAATACTGCGTCTTGGTTCACCGCTCTCACTCAACATGGCAAGGAAGACCTTAAATTCCCTCGAGGACAA
-GGCGTTCCAATTAACACCAATAGCAGTCCAGATGACCAAATTGGCTACTACCGAAGAGCTACCAGACGAA
-TTCGTGGTGGTGACGGTAAAATGAAAGATCTCAGTCCAAGATGGTATTTCTACTACCTAGGAACTGGGCC
-AGAAGCTGGACTTCCCTATGGTGCTAACAAAGACGGCATCATATGGGTTGCAACTGAGGGAGCCTTGAAT
-ACACCAAAAGATCACATTGGCACCCGCAATCCTGCTAACAATGCTGCAATCGTGCTACAACTTCCTCAAG
-GAACAACATTGCCAAAAGGCTTCTACGCAGAAGGGAGCAGAGGCGGCAGTCAAGCCTCTTCTCGTTCCTC
-ATCACGTAGTCGCAACAGTTCAAGAAATTCAACTCCAGGCAGCAGTAGGGGAACTTCTCCTGCTAGAATG
-GCTGGCAATGGCGGTGATGCTGCTCTTGCTTTGCTGCTGCTTGACAGATTGAACCAGCTTGAGAGCAAAA
-TGTCTGGTAAAGGCCAACAACAACAAGGCCAAACTGTCACTAAGAAATCTGCTGCTGAGGCTTCTAAGAA
-GCCTCGGCAAAAACGTACTGCCACTAAAGCATACAATGTAACACAAGCTTTCGGCAGACGTGGTCCAGAA
-CAAACCCAAGGAAATTTTGGGGACCAGGAACTAATCAGACAAGGAACTGATTACAAACATTGGCCGCAAA
-TTGCACAATTTGCCCCCAGCGCTTCAGCGTTCTTCGGAATGTCGCGCATTGGCATGGAAGTCACACCTTC
-GGGAACGTGGTTGACCTACACAGGTGCCATCAAATTGGATGACAAAGATCCAAATTTCAAAGATCAAGTC
-ATTTTGCTGAATAAGCATATTGACGCATACAAAACATTCCCACCAACAGAGCCTAAAAAGGACAAAAAGA
-AGAAGGCTGATGAAACTCAAGCCTTACCGCAGAGACAGAAGAAACAGCAAACTGTGACTCTTCTTCCTGC
-TGCAGATTTGGATGATTTCTCCAAACAATTGCAACAATCCATGAGCAGTGCTGACTCAACTCAGGCCTAA"
-# Adjust the unknown sequence by regular expression
-UnSeq <- gsub("[\r\n]", "", UnSeq)
-# Check the sequence
-UnSeq
+UnSeq <- "ATGTCTGATAATGGACCCCAAAATCAGCGAAATGCACCCCGCATTACGTTTGGTGGACCCTCAGATTCAACTGGCAGTAACCAGAATGGAGAACGCAGTGGGGCGCGATCAAAACAACGTCGGCCCCAAGGTTTACCCAATAATACTGCGTCTTGGTTCACCGCTCTCACTCAACATGGCAAGGAAGACCTTAAATTCCCTCGAGGACAAGGCGTTCCAATTAACACCAATAGCAGTCCAGATGACCAAATTGGCTACTACCGAAGAGCTACCAGACGAATTCGTGGTGGTGACGGTAAAATGAAAGATCTCAGTCCAAGATGGTATTTCTACTACCTAGGAACTGGGCCAGAAGCTGGACTTCCCTATGGTGCTAACAAAGACGGCATCATATGGGTTGCAACTGAGGGAGCCTTGAATACACCAAAAGATCACATTGGCACCCGCAATCCTGCTAACAATGCTGCAATCGTGCTACAACTTCCTCAAGGAACAACATTGCCAAAAGGCTTCTACGCAGAAGGGAGCAGAGGCGGCAGTCAAGCCTCTTCTCGTTCCTCATCACGTAGTCGCAACAGTTCAAGAAATTCAACTCCAGGCAGCAGTAGGGGAACTTCTCCTGCTAGAATGGCTGGCAATGGCGGTGATGCTGCTCTTGCTTTGCTGCTGCTTGACAGATTGAACCAGCTTGAGAGCAAAATGTCTGGTAAAGGCCAACAACAACAAGGCCAAACTGTCACTAAGAAATCTGCTGCTGAGGCTTCTAAGAAGCCTCGGCAAAAACGTACTGCCACTAAAGCATACAATGTAACACAAGCTTTCGGCAGACGTGGTCCAGAACAAACCCAAGGAAATTTTGGGGACCAGGAACTAATCAGACAAGGAACTGATTACAAACATTGGCCGCAAATTGCACAATTTGCCCCCAGCGCTTCAGCGTTCTTCGGAATGTCGCGCATTGGCATGGAAGTCACACCTTCGGGAACGTGGTTGACCTACACAGGTGCCATCAAATTGGATGACAAAGATCCAAATTTCAAAGATCAAGTCATTTTGCTGAATAAGCATATTGACGCATACAAAACATTCCCACCAACAGAGCCTAAAAAGGACAAAAAGAAGAAGGCTGATGAAACTCAAGCCTTACCGCAGAGACAGAAGAAACAGCAAACTGTGACTCTTCTTCCTGCTGCAGATTTGGATGATTTCTCCAAACAATTGCAACAATCCATGAGCAGTGCTGACTCAACTCAGGCCTAA"
 ```
 
 ### Generate the alignment
 ```{r}
 # Pairwise Alignments
-# library(annotate)
 UnSeqBLAST <- blastSequences(paste(UnSeq), 
                              as = 'data.frame', 
                              hitListSize = 20, 
@@ -64,7 +46,6 @@ UnSeqBLAST <- blastSequences(paste(UnSeq),
 
 ```{r}
 # Multiple Alignments
-library(ape)
 USHitsDF <- data.frame(ID = UnSeqBLAST$Hit_accession, 
                        Seq = UnSeqBLAST$Hsp_hseq,
                        stringsAsFactors = FALSE)
@@ -75,28 +56,24 @@ UnSeqBLAST$Hit_len
 ```{r}
 USHitSeqs <- read.GenBank(UnSeqBLAST$Hit_accession)
 # Take a look at the species
-attr(USHitSeqs,"species")
+attr(USHitSeqs, "species")
 ```
 #### From this output we could confirm that the separated unknown sequence are related to coronavirus 2, which could cause severe acute respiratory syndrome.
 
-
 ```{r}
 # Convert DNASbin to DNAStringSet
-library(Biostrings)
-Cov2DNAstring <- USHitsDF$Seq %>%
+Cov2DNAstring <- USHitsDF$Seq %>% 
   as.character %>% # Convert to strings
   lapply(., paste0, collapse = "") %>% # Collapse each sequence to a single string
   unlist %>% # Flatten list to a vector
   DNAStringSet # Convert vector to DNAStringSet object
 ```
 
-
 ```{r}
 # Give each sequence a unique names
-names(Cov2DNAstring) <- paste(1:nrow(USHitsDF), USHitsDF$ID, sep="_")
+names(Cov2DNAstring) <- paste(1:nrow(USHitsDF), USHitsDF$ID, sep = "_")
 
 # Use MUSCLE to align the sequences
-library(muscle)
 Cov2Align <- muscle::muscle(stringset = Cov2DNAstring, quiet = T)
 
 # Check the result
@@ -113,13 +90,50 @@ Cov2AlignBin <- as.DNAbin(Cov2Align)
 ```{r}
 SeqLen <- as.numeric(lapply(Cov2DNAstring, length))
 # Show the distribution of sequence length
-library(ggplot2)
 qplot(SeqLen) + theme_bw()
 ```
+#### **Fig.1** Distribution of the matches of sequence length.
+#### According to the alignment and distribution graph, there is no obvious gap within the sequence. Thus, we don't need to remove any part of them.
 
 
+### Visualizing the distance matrix
+```{r}
+CovDM <- dist.dna(Cov2AlignBin, model = "K80")
+CovDMmat <- as.matrix(CovDM)
+
+# Plot the distance matrix
+PDat <- melt(CovDMmat)
+ggplot(data = PDat, aes(x = Var1, y = Var2, fill = value)) + 
+  geom_tile() + 
+  scale_fill_gradientn(colours = c("white", "blue", "green", "red")) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+#### **Fig.2** Figure of the distance matrix.
+#### The figure shows that all the sequences has a really small distance to each other. Since they are all form same species, coronavirus 2, it is possible that they have 0 distance to each other.
 
 
+```{r}
+Cov2Tree <- nj(CovDM)
 
+# Visualizing the phylogenetic tree
+ggtree(Cov2Tree)
+```
+#### **Fig.3** Phylogenetic tree of the 20 selected sequences.
+#### There is no branch in this phylogenetic tree, since the distances among sequences are similar and small (as shown in Fig.2). Thus, all the 20 sequences are close related to each other and probabily came from same species.
+#### The branch lengths in the above graph are based on the pairwise distance matrix, thus we could remove the branch length info to focus on the relationships among our 20 sequences.
+
+```{r}
+# Adjust the tree
+ggtree(Cov2Tree, branch.length = 'none', layout = "rectangular") + geom_tiplab()
+```
+#### **Fig.4** Phylogenetic tree of the 20 selected sequences without consider the branch length.
+
+### Save the tree
+```{r}
+write.tree(Cov2Tree, "Coronavirus_2_tree.tre")
+```
+
+## Report
+#### For this unknown sequence, we performed a series of tests including alignment and production of phylogenetic tree (Fig.1-4). Based on the results of our analysis of the patient's blood samples, we found that this is a sequence from coronavirus 2. This is a situation to be concerned about because it may cause severe acute respiratory syndrome, affecting the patient's treatment or recovery.
 
 
